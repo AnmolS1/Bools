@@ -1,6 +1,9 @@
 # Bools
 generate truth table for user-provided boolean expressions
 
-the java version of this is text-based
+### java version usage
+
+in the java folder, run: `javac *.java`
+and then run: `java BooleanWork`
 
 the python version Will hopefully be in a gui
