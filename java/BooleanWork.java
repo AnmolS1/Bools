@@ -1,18 +1,18 @@
-package java;
-import static java.lang.System.*;
+import static java.lang.System.out;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.Scanner;
-import java.io.IOException;
-import java.io.StringWriter;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+
 import javax.tools.JavaCompiler;
-import javax.tools.ToolProvider;
+import javax.tools.JavaCompiler.CompilationTask;
 import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
 import javax.tools.StandardJavaFileManager;
-import javax.tools.JavaCompiler.CompilationTask;
+import javax.tools.ToolProvider;
 
 public class BooleanWork {
 	/**
@@ -60,11 +60,13 @@ public class BooleanWork {
 	 * @param table - boolean 2d array to print
 	 * @param numVars - number of variables in the boolean expression
 	 */
-	public static void printBooleanTable(boolean [][] table, int numVars) {
+	public static void printTruthTable(boolean [][] table, String [] variables) {
+		int numVars = variables.length; // obvious
+		
 		// print the variables out, convenience ideal dictates using the index to convert
 		// the rest is just string formatting
 		for (int i = 0; i < numVars; i++) {
-			out.print((i == 0 ? "\n " : "") + (char) (i + 65) + (i != numVars - 1 ? " " : " |\n"));
+			out.print((i == 0 ? "\n " : "") + variables[i] + (i != numVars - 1 ? " " : " |\n"));
 		}
 		
 		out.println("-" + "--".repeat(numVars + 2)); // separator
@@ -160,14 +162,14 @@ public class BooleanWork {
 	 * @param exp - boolean expression to evaluate
 	 * @return boolean[][]
 	 */
-	public static boolean[][] evaluate(boolean[][] table, String exp) throws Exception {
+	public static boolean[][] evaluate(boolean[][] table, String exp, String [] variables) throws Exception {
 		for (int row = 0; row < table.length; row++) {
 			String rowCalc = exp;
 			
 			// set up the string for execution
 			// replace all the variables relative to their position in the truth table
-			for (int elIndex = 0; elIndex < table[row].length - 1; elIndex++) {
-				rowCalc = rowCalc.replace("" + (char)(elIndex + 65), table[row][elIndex] ? "true" : "false");
+			for (int i = 0; i < variables.length; i++) {
+				rowCalc = rowCalc.replaceAll("\\b" + variables[i] + "\\b", table[row][i] ? "true" : "false");
 			}
 			
 			try {
@@ -187,69 +189,81 @@ public class BooleanWork {
 	public static void main (String [] args) {
 		Scanner scan = new Scanner(System.in); // "sum of the forces equals m a"
 		
-		int numVars; // store the number of boolean variables in here
+		// store the variables in here
+		// it'll be faster and easier for the user when they can just specify what they're using
+		// also the customization is nice to have
+		String [] variables = null;
 		String expression; // store the boolean algebra expression in here
-		boolean [][] table; // store the boolean table in here
+		boolean [][] table; // store the truth table in here
 		boolean isFirst = true;
 		
 		main: while (true) {
-			// reset all the variables without creating new instances, saves memory (i think)
-			numVars = 0;
-			expression = "";
+			// reset all the variables
+			variables = null;
 			table = null;
+			expression = "";
 			
 			if (isFirst) {
-				out.println("use an integer greater than 0 for the number of boolean variables");
-				out.println("enter \"q\" at any time to quit");
+				out.println("enter a comma-separated list of the variables to be used");
+				out.println("use singular letters as variable names");
+				out.println("enter \"quit\" at any time to quit");
 			}
-			// get the number of variables for the problem
-			numVarLoop: while (true) {
-				out.print("enter the number of variables: ");
-				String tempNumVars = scan.nextLine();
+			// get the list of variables for the problem
+			varListLoop: while (true) {
+				out.print("enter the list of variables: ");
+				String tempList = scan.nextLine();
 				
 				// we're quitting so break out of main
-				if (tempNumVars.equals("q")) {
+				if (tempList.equals("quit")) {
 					break main;
 				}
 				
-				// number of variables should be an integer greater than 0
+				// parse the list
 				try {
-					numVars = Integer.parseInt(tempNumVars);
-					if (numVars < 1) throw new NumberFormatException();
-					break numVarLoop;
-				} catch (NumberFormatException nfe) {
-					out.println("please enter a valid integer greater than 0");
+					variables = tempList.split(", ?");
+					
+					for (String var : variables) {
+						if (var.length() != 1) {
+							throw new Exception("use singular letters as variable names");
+						} else if (!Character.isLetter(var.charAt(0))) {
+							throw new Exception("only use letters as variable names");
+						}
+					}
+					
+					break varListLoop;
+				} catch (Exception e) {
+					out.println(e.getMessage());
 				}
 			}
 			
 			// set up the table
-			table = getAllCombos(numVars);
+			table = getAllCombos(variables.length);
 			
 			if (isFirst) {
-				out.println("\nuse the capital letters A through Z as variable names");
-				out.println("enter \"b\" to go back");
+				out.println("\nonly use the variables previously listed");
+				out.println("enter \"back\" to go back");
 			}
 			// get the boolean algebra expression
 			out.print("enter the boolean expression: ");
 			expression = scan.nextLine();
 			
 			// the back command will just let us input a different number of variables
-			if (expression.equals("b")) {
+			if (expression.equals("back")) {
 				continue;
-			} else if (expression.equals("q")) {
+			} else if (expression.equals("quit")) {
 				break main;
 			}
 			
 			// catch any errors, just let the user know and restart
 			try {
-				table = evaluate(table, expression);
+				table = evaluate(table, expression, variables);
 			} catch (Exception e) {
 				out.println("\nthe boolean expression is invalid or something else went wrong, try again\n\n" + "-".repeat(30) + "\n");
 				continue;
 			}
 			
 			// printy boi
-			printBooleanTable(table, numVars);
+			printTruthTable(table, variables);
 			
 			// separator
 			out.println("-".repeat(30) + "\n");
